@@ -12,3 +12,15 @@ test-results/
 .DS_Store
 .env*
 !.env.example
+
+.model-cache/
+public/models/
+public/ort/
+public/tesseract/
+tests/eval/.cache/
+# Written by npx playwright test sites
+tests/eval/sites-report.md
+# Your own screenshots for scoring CLIP; never committed
+tests/eval/images-real/
+# Written by npm run eval
+tests/eval/report.md

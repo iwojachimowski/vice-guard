@@ -76,8 +76,11 @@ describe('local spoiler matching', () => {
     expect(detect('GTA 6 ending', { ...defaults, enabled: false })).toBe(false);
   });
   it('repairs invalid stored preferences and bounds custom input', () => {
-    expect(parseSettings({ allowReveal: false }).allowReveal).toBe(false);
-    expect(parseSettings({ allowReveal: 'false' }).allowReveal).toBe(true);
+    expect(parseSettings({ showBadge: false }).showBadge).toBe(false);
+    expect(parseSettings({ showBadge: 'false' }).showBadge).toBe(true);
+    expect(parseSettings({ clipThreshold: 2 }).clipThreshold).toBe(
+      defaults.clipThreshold,
+    );
     expect(parseSettings(null)).toEqual(defaults);
     expect(
       parseSettings({
@@ -91,4 +94,15 @@ describe('local spoiler matching', () => {
         .keywords,
     ).toHaveLength(200);
   });
+});
+
+describe('Rockstar negation', () => {
+  it.each([
+    "The 10 best open world games of the decade (that aren't from Rockstar) Continue reading the story",
+    'Great non-Rockstar story games',
+  ])('keeps %s', (title) => expect(detect(title, defaults)).toBe(false));
+  it('still blocks Rockstar story coverage', () =>
+    expect(detect("Rockstar's new story trailer is here", defaults)).toBe(
+      true,
+    ));
 });
