@@ -4,7 +4,7 @@ import { readSettings, watchSettings } from '../lib/storage';
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
-  runAt: 'document_idle',
+  runAt: 'document_start',
   async main(ctx) {
     const settings = await readSettings();
     if (ctx.isInvalid) return;

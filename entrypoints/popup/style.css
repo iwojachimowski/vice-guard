@@ -114,6 +114,51 @@ textarea {
   font: inherit;
   line-height: 1.5;
 }
+.channels h2 {
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.channels select,
+.channels input[type='search'],
+.channels input:not([type]) {
+  display: block;
+  width: 100%;
+  margin: 8px 0 12px;
+  padding: 7px;
+  font: inherit;
+  color: inherit;
+  background: Field;
+  border: 1px solid #888;
+  border-radius: 4px;
+}
+.channels summary {
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.channel-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 16px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+.channel-list li {
+  padding: 9px 0;
+}
+.channel-list label > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.channel-list small {
+  display: block;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.channel-list button {
+  margin: 6px 0 0 22px;
+  padding: 3px 6px;
+  font-size: 11px;
+}
 .save-row {
   display: flex;
   align-items: center;

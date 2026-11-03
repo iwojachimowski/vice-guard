@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startScanner } from '../lib/scanner';
 import { defaults } from '../lib/settings';
+import { builtInChannels } from '../lib/youtube-channel-filter';
+import { channelKey } from '../lib/channel-identity';
 
 let scanner: ReturnType<typeof startScanner> | undefined;
 async function scan() {
@@ -17,6 +19,57 @@ afterEach(() => {
 });
 
 describe('feed scanning', () => {
+  it.each([
+    'ytd-rich-item-renderer',
+    'ytd-video-renderer',
+    'ytd-compact-video-renderer',
+    'ytd-grid-video-renderer',
+    'ytd-reel-video-renderer',
+    'yt-lockup-view-model',
+  ])(
+    'applies channel protection to the complete %s and restores it when disabled',
+    async (tag) => {
+      document.body.innerHTML = `<${tag} id="video"><img alt="Thumbnail"><h3>GTA 6 first look</h3><ytd-channel-name><a href="/@Shirrako">Shirrako</a></ytd-channel-name></${tag}>`;
+      const settings = { ...defaults, mode: 'light' as const };
+      scanner = startScanner(settings);
+      await scan();
+      expect(
+        document
+          .getElementById('video')!
+          .hasAttribute('data-vice-guard-hidden'),
+      ).toBe(true);
+      scanner.update({
+        ...settings,
+        disabledChannels: [channelKey(builtInChannels[0]!)],
+      });
+      expect(document.querySelector('[data-vice-guard-hidden]')).toBeNull();
+    },
+  );
+  it('rescans a recycled card when its uploader changes after reveal or SPA navigation', async () => {
+    document.body.innerHTML =
+      '<ytd-video-renderer><h3>Unrelated title</h3><ytd-channel-name><a href="/@SomeoneElse">Uploader</a></ytd-channel-name></ytd-video-renderer>';
+    scanner = startScanner({
+      ...defaults,
+      mode: 'light',
+      channelMode: 'strict',
+    });
+    const card = document.querySelector('ytd-video-renderer')!;
+    expect(card.hasAttribute('data-vice-guard-hidden')).toBe(false);
+    card.querySelector('a')!.setAttribute('href', '/@Shirrako');
+    await scan();
+    expect(card.hasAttribute('data-vice-guard-hidden')).toBe(true);
+    card.querySelector('a')!.setAttribute('href', '/@SomeoneElse');
+    await scan();
+    expect(card.hasAttribute('data-vice-guard-hidden')).toBe(false);
+    document.body.innerHTML =
+      '<ytd-compact-video-renderer><h3>GTA VI video</h3><ytd-channel-name><a href="/@Shirrako">Uploader</a></ytd-channel-name></ytd-compact-video-renderer>';
+    await scan();
+    expect(
+      document
+        .querySelector('ytd-compact-video-renderer')!
+        .hasAttribute('data-vice-guard-hidden'),
+    ).toBe(true);
+  });
   it('restores grouped YouTube controls if a page rerender removes their panel', async () => {
     document.body.innerHTML =
       '<ytd-rich-grid-renderer><div id="contents"><ytd-rich-item-renderer>GTA 6 ending</ytd-rich-item-renderer></div></ytd-rich-grid-renderer>';

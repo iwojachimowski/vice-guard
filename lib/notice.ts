@@ -21,6 +21,7 @@ export function createNotice(
   doc: Document,
   allowReveal: boolean,
   onReveal: () => void,
+  label = 'GTA 6 content hidden',
 ): HTMLElement {
   const host = doc.createElement('div');
   host.dataset.viceGuardUi = '';
@@ -30,12 +31,12 @@ export function createNotice(
   if (allowReveal) {
     const button = doc.createElement('button');
     button.type = 'button';
-    button.textContent = 'GTA 6 content hidden · Click to reveal';
+    button.textContent = `${label} · Click to reveal`;
     button.addEventListener('click', onReveal);
     shadow.append(style, button);
   } else {
     const notice = doc.createElement('p');
-    notice.textContent = 'GTA 6 content hidden · Reveal disabled';
+    notice.textContent = `${label} · Reveal disabled`;
     shadow.append(style, notice);
   }
   return host;

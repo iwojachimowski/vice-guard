@@ -1,4 +1,4 @@
-import { detect } from './detector';
+import { detect, hasGtaContext } from './detector';
 import {
   findTargets,
   readText,
@@ -10,9 +10,14 @@ import { createYouTubeLayout, youtubeStyles } from './youtube';
 import { createShortsProtection, shortsStyles } from './shorts';
 import { googleImageSelector, imageContext } from './google-images';
 import { createNotice } from './notice';
+import {
+  createChannelFilter,
+  uploaderSignature,
+} from './youtube-channel-filter';
 
 export function startScanner(initial: Settings, doc = document) {
   let settings = initial;
+  let channelFilter = createChannelFilter(settings);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const pending = new Set<Element>();
   const hidden = new Map<HTMLElement, HTMLElement>();
@@ -22,7 +27,7 @@ export function startScanner(initial: Settings, doc = document) {
   const shorts = createShortsProtection(doc);
   const style = doc.createElement('style');
   style.textContent = `[${attribute}]:not([data-vice-guard-short]) { display: none !important; }${youtubeStyles}${shortsStyles}`;
-  doc.head.append(style);
+  (doc.head ?? doc.documentElement).append(style);
 
   function restore(element: HTMLElement) {
     hidden.get(element)?.remove();
@@ -43,11 +48,15 @@ export function startScanner(initial: Settings, doc = document) {
     if (!element.isConnected || element.closest('[data-vice-guard-ui]')) return;
     const isImage = element.matches(googleImageSelector);
     const text = contentText(element);
+    const signature = text + '\n' + uploaderSignature(element);
     const filtering =
       element.matches(xSidebarSelector) || isImage
         ? { ...settings, mode: 'strict' as const, spoilerFree: false }
         : settings;
-    if (!detect(text, filtering) || revealed.get(element) === text) {
+    if (
+      (!detect(text, filtering) && !channelFilter(element, text)) ||
+      revealed.get(element) === signature
+    ) {
       if (hidden.has(element)) restore(element);
       return;
     }
@@ -68,11 +77,19 @@ export function startScanner(initial: Settings, doc = document) {
         element.before(existing);
       return;
     }
-    const host = createNotice(doc, settings.allowReveal, () => {
-      if (!settings.allowReveal) return;
-      revealed.set(element, contentText(element));
-      restore(element);
-    });
+    const host = createNotice(
+      doc,
+      settings.allowReveal,
+      () => {
+        if (!settings.allowReveal) return;
+        revealed.set(
+          element,
+          contentText(element) + '\n' + uploaderSignature(element),
+        );
+        restore(element);
+      },
+      hasGtaContext(text) ? 'GTA 6 content hidden' : 'Channel content hidden',
+    );
     if (
       !shorts.place(element, host) &&
       !youtube.place(element, host, settings.allowReveal)
@@ -128,7 +145,7 @@ export function startScanner(initial: Settings, doc = document) {
       /(^|\.)youtube\.com$/.test(doc.location.hostname) ||
       doc.querySelector('ytd-rich-grid-renderer') !== null;
     if (settings.enabled || keepYouTubeLayout)
-      observer.observe(doc.body, {
+      observer.observe(doc.documentElement, {
         childList: true,
         subtree: true,
         characterData: settings.enabled,
@@ -142,7 +159,10 @@ export function startScanner(initial: Settings, doc = document) {
   }
   youtube.sync();
   observe();
-  queue(doc.body);
+  if (settings.enabled) {
+    pending.add(doc.documentElement);
+    flush();
+  }
   return {
     update(next: Settings) {
       observer.disconnect();
@@ -150,11 +170,12 @@ export function startScanner(initial: Settings, doc = document) {
       clearTimeout(timer);
       timer = undefined;
       settings = next;
+      channelFilter = createChannelFilter(settings);
       revealed = new WeakMap();
       for (const [element] of hidden) restore(element);
       youtube.sync();
       if (settings.enabled) {
-        pending.add(doc.body);
+        pending.add(doc.documentElement);
         flush();
       }
       observe();

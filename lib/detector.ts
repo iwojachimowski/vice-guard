@@ -36,3 +36,8 @@ export function detect(text: string, settings: Settings): boolean {
     contains(normalized, word),
   );
 }
+
+export function hasGtaContext(text: string): boolean {
+  const normalized = normalize(text);
+  return dictionary.context.some((word) => contains(normalized, word));
+}

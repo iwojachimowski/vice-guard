@@ -1,6 +1,73 @@
 import { readFileSync } from 'node:fs';
 import { expect, openPage, test } from './fixtures';
 
+test('channel settings persist across browser restart and update video cards immediately', async ({
+  extension,
+}) => {
+  let { context, popup } = extension;
+  await popup.getByRole('radio', { name: /Light/ }).check();
+  await popup.getByText('Manage channels', { exact: true }).click();
+  await popup
+    .getByLabel('Add a YouTube channel', { exact: true })
+    .fill('Not a channel ID');
+  await popup.getByRole('button', { name: 'Add channel', exact: true }).click();
+  await expect(popup.getByRole('alert')).toContainText(
+    'Display names are not supported',
+  );
+  await popup
+    .getByLabel('Add a YouTube channel', { exact: true })
+    .fill('@customuploader');
+  await popup.getByRole('button', { name: 'Add channel', exact: true }).click();
+  await expect(popup.getByRole('status')).toHaveText('Saved.');
+  ({ context, popup } = await extension.restart());
+  await popup.getByText('Manage channels', { exact: true }).click();
+  await popup
+    .getByLabel('Search channels', { exact: true })
+    .fill('@customuploader');
+  await expect(
+    popup.getByRole('checkbox', { name: /@customuploader/ }),
+  ).toBeChecked();
+  const page = await openPage(
+    context,
+    `
+    <ytd-video-renderer id="custom"><h3>GTA 6 first look</h3><img alt="Thumbnail"><ytd-channel-name><a href="/@customuploader">Custom uploader</a></ytd-channel-name></ytd-video-renderer>
+    <ytd-grid-video-renderer id="priority"><h3>Other game review</h3><ytd-channel-name><a href="/@Shirrako">Shirrako</a></ytd-channel-name></ytd-grid-video-renderer>
+    <ytd-compact-video-renderer id="secondary"><h3>GTA 5 review</h3><ytd-channel-name><a href="/@DarkViperAU">DarkViperAU</a></ytd-channel-name></ytd-compact-video-renderer>`,
+  );
+  await expect(page.locator('#custom')).toBeHidden();
+  await expect(page.locator('#priority')).toBeVisible();
+  await expect(page.locator('#secondary')).toBeVisible();
+  await popup.getByRole('checkbox', { name: /@customuploader/ }).uncheck();
+  await expect(page.locator('#custom')).toBeVisible();
+  await popup.getByRole('checkbox', { name: /@customuploader/ }).check();
+  await expect(page.locator('#custom')).toBeHidden();
+  await popup
+    .getByLabel('Channel protection', { exact: true })
+    .selectOption('strict');
+  await expect(page.locator('#priority')).toBeHidden();
+  await expect(page.locator('#secondary')).toBeVisible();
+  await popup
+    .getByRole('checkbox', { name: 'Enable channel protection', exact: true })
+    .uncheck();
+  await expect(page.locator('#priority')).toBeVisible();
+  await expect(page.locator('#custom')).toBeVisible();
+  await popup
+    .getByRole('button', { name: 'Remove @customuploader', exact: true })
+    .click();
+  await expect(
+    popup.getByText('No matching channels.', { exact: true }),
+  ).toBeVisible();
+  await expect(popup.getByRole('status')).toHaveText('Saved.');
+  await popup.reload();
+  await popup.getByText('Manage channels', { exact: true }).click();
+  await popup
+    .getByLabel('Search channels', { exact: true })
+    .fill('@customuploader');
+  await expect(
+    popup.getByText('No matching channels.', { exact: true }),
+  ).toBeVisible();
+});
+
 test('preferences persist and update open pages; reveal locks prevent accidental clicks', async ({
   extension: { context, popup },
 }) => {
@@ -279,5 +346,16 @@ test('popup fits the browser window in light and dark themes', async ({
       path: `test-results/settings-${theme}.png`,
       fullPage: true,
     });
+    await popup.getByText('Manage channels', { exact: true }).click();
+    expect(
+      await popup.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await popup.screenshot({
+      path: `test-results/channels-${theme}.png`,
+      fullPage: true,
+    });
+    await popup.getByText('Manage channels', { exact: true }).click();
   }
 });

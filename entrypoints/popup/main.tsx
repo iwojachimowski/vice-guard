@@ -8,6 +8,7 @@ import {
 } from '../../lib/settings';
 import { readSettings, saveSettings } from '../../lib/storage';
 import './style.css';
+import { ChannelSettings } from './channels';
 
 const modes: { value: Mode; title: string; detail: string }[] = [
   { value: 'light', title: 'Light', detail: 'Explicit spoilers only' },
@@ -159,6 +160,7 @@ function App() {
           </span>
         </div>
       </section>
+      <ChannelSettings settings={settings} ready={ready} update={update} />
       <footer>Runs locally. No tracking or network requests.</footer>
     </main>
   );

@@ -1,5 +1,6 @@
 import { shortsSelector } from './shorts';
 import { googleImageSelector } from './google-images';
+import { isUploaderText, youtubeVideoSelector } from './youtube-channel-filter';
 
 export const xSidebarSelector =
   '[data-testid="sidebarColumn"] [data-testid^="news_sidebar_article_"], [data-testid="sidebarColumn"] [data-testid="trend"]';
@@ -60,6 +61,7 @@ function contentTarget(element: Element): HTMLElement | null {
 
 export function readText(element: HTMLElement): string {
   const parts: string[] = [];
+  const isVideo = element.matches(youtubeVideoSelector);
   const walker = element.ownerDocument.createTreeWalker(
     element,
     NodeFilter.SHOW_TEXT,
@@ -67,6 +69,8 @@ export function readText(element: HTMLElement): string {
   let length = 0;
   while (walker.nextNode() && length < 24_000) {
     const node = walker.currentNode;
+    if (isVideo && node.parentElement && isUploaderText(node.parentElement))
+      continue;
     if (
       node.parentElement?.closest(
         'script, style, noscript, [data-vice-guard-ui]',
@@ -80,6 +84,7 @@ export function readText(element: HTMLElement): string {
   for (const child of element.querySelectorAll(
     '[title], [aria-label], img[alt]',
   )) {
+    if (isVideo && isUploaderText(child)) continue;
     parts.push(
       child.getAttribute('title') ?? '',
       child.getAttribute('aria-label') ?? '',

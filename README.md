@@ -62,13 +62,26 @@ Two areas are handled more broadly in every mode:
 
 **Your keywords** adds literal words or phrases, one per line. These still need GTA 6 context. Up to 200 phrases of 120 characters are saved. Custom regular expressions are not accepted.
 
+**Known Spoiler Channels** adds uploader-based YouTube protection. It starts enabled in Standard mode, independently of the Light/Balanced/Strict text filter:
+
+| Channel mode | Priority and custom channels                | GTA-focused channels                                                                                        |
+| ------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Standard     | Hide GTA 6 uploads                          | Apply Balanced story/gameplay detection to GTA 6 uploads, even with Light or experimental browsing selected |
+| Strict       | Hide all uploads, including unrelated games | Hide all GTA 6 uploads                                                                                      |
+
+Expand **Manage channels** to search the 41 bundled channels, switch individual entries on or off, or add up to 200 custom channels using a YouTube `@handle`, channel ID, or channel URL. Custom channels follow the priority rules and can be removed. The protected count reflects enabled entries while protection is on. Disabling a channel removes only its extra channel rule; ordinary keyword filtering still applies.
+
+Bundled entries use verified channel IDs first and exact handles when the card exposes no ID. Display names never identify a channel. Custom handles are matched literally without contacting YouTube; use an ID when possible because handles can change. If uploader information is missing, ordinary spoiler detection still runs.
+
+The list is preventive, based on the requested community risk list and GTA-focused creators; inclusion is not proof of spoiler misconduct. Identifiers and verification dates are recorded in [lib/youtube-channels.json](lib/youtube-channels.json). Channel protection never treats a secondary creator's name alone as GTA 6 context.
+
 Settings stay on the device and are not synchronized between browsers.
 
 ### YouTube
 
 Blocked home-feed videos are removed from the grid, with reveal controls grouped above it. Remaining loaded videos fill gaps across rows and before full-width shelves. Gap filling stays active when filtering is switched off; disabling the extension itself and refreshing restores YouTube's original layout. No replacement recommendations are requested. Visual order can differ from keyboard navigation order when a later card fills a shelf gap.
 
-Matching Shorts players are covered and paused. Playback attempts are stopped while blocked. Reveal restores visibility without automatically starting playback.
+Matching Shorts players are covered and paused. Playback attempts are stopped while blocked. Reveal restores visibility without automatically starting playback. Channel rules share the same complete-card protection for home feeds, search, subscriptions, recommendations, and Shorts. The scanner starts at document start and checks existing cards immediately; later updates use the existing batched observer.
 
 ## Privacy and permissions
 
@@ -107,6 +120,7 @@ The code is organized around a small detector and scanner:
 - `lib/detector.ts` and `lib/spoilers.json`: text matching and bundled terms.
 - `lib/scanner.ts`, `lib/targets.ts`, and `lib/notice.ts`: scanning, card selection, and blocked-content notices.
 - `lib/youtube.ts`, `lib/shorts.ts`, and `lib/google-images.ts`: site-specific behavior.
+- `lib/youtube-channel-filter.ts`, `lib/channel-identity.ts`, and `lib/youtube-channels.json`: uploader identity and bundled channel rules.
 - `lib/settings.ts` and `lib/storage.ts`: preferences and local storage.
 - `entrypoints/`: content-script lifecycle and React popup.
 - `tests/`: detector, DOM, and browser regressions.
@@ -117,5 +131,7 @@ The code is organized around a small detector and scanner:
 Filter changes belong in [lib/spoilers.json](lib/spoilers.json) and ship with extension releases. Add a regression test for each new term or selector, including an unrelated example that should remain visible. Avoid real unreleased plot details in tests or issue reports.
 
 Keep detection local, avoid additional runtime dependencies, and run the checks above before opening a pull request.
+
+To check bundled channel identifiers against YouTube, run `node scripts/verify-youtube-channels.mjs`. This maintainer-only script makes network requests; it is not shipped as extension code. Review its reported channel titles before using `--write` to refresh metadata. Existing IDs are checked first so a reassigned handle cannot silently replace a stored ID. Name changes and new entries still need manual review.
 
 Code is licensed under [MIT](LICENSE). Unofficial fan project; not affiliated with Rockstar Games or Take-Two Interactive.
